@@ -3,6 +3,7 @@
 namespace Acme;
 
 use Acme\Exceptions\InputParserException;
+use Acme\Exceptions\InputReaderException;
 
 class InputParser
 {
@@ -37,6 +38,11 @@ class InputParser
     protected $metalValues = [];
 
     /**
+     * @var string Current line we're on
+     */
+    protected $currentLine;
+
+    /**
      * @var string Left side of the user input after being split by the word "is"
      */
     protected $leftSide;
@@ -63,26 +69,48 @@ class InputParser
 
     /**
      * InputParser constructor.
+     *
      * @param InputReaderContract $input
      */
-    public function __construct(InputReaderContract $input)
+    public function __construct(InputReaderContract $input = null)
+    {
+        $this->setInput($input);
+    }
+
+    /**
+     * Set input stream
+     *
+     * @param $input
+     */
+    public function setInput($input)
     {
         $this->input = $input;
     }
 
     /**
+     * Process a direct single command
+     *
+     * @param string $command
+     * @return null|string
+     */
+    public function processCommand(string $command)
+    {
+        $this->currentLine = $command;
+
+        return $this->processCurrentLine();
+    }
+
+    /**
      * Process input and print the result on the screen
      */
-    public function process()
+    public function processInput()
     {
         try {
             while ($this->getInput()) {
-                if ($this->isQuestion()) {
-                    $answer = $this->answerQuestion();
+                $result = $this->processCurrentLine();
 
-                    echo $answer."\n";
-                } else {
-                    $this->processInstruction();
+                if ($result !== null) {
+                    echo $result."\n";
                 }
             }
         } catch (InputParserException $e) {
@@ -91,17 +119,52 @@ class InputParser
     }
 
     /**
+     * Process current command line
+     *
+     * @return null|string
+     */
+    public function processCurrentLine()
+    {
+        if ($this->isQuestion()) {
+            $answer = $this->answerQuestion();
+
+            $this->clearCurrentLine();
+
+            return $answer;
+        } else {
+            $this->processInstruction();
+
+            $this->clearCurrentLine();
+            
+            return null;
+        }
+    }
+
+    /**
+     * Clear current command line
+     */
+    public function clearCurrentLine()
+    {
+        $this->currentLine = null;
+    }
+
+    /**
      * Continuously get new lines from the input until there is no more
      *
-     * @return bool
+     * @return mixed
+     * @throws InputReaderException
      */
     public function getInput()
     {
+        if ($this->input === null) {
+            throw new InputReaderException("You need to set up an input stream first via constructor or setInput() method");
+        }
+
         return $this->input->getInput();
     }
 
     /**
-     * Checks if the input is a question
+     * Check if current line is a question
      *
      * @return bool
      */
@@ -117,7 +180,7 @@ class InputParser
      */
     public function getLine()
     {
-        return $this->input->getCurrentLine();
+        return $this->currentLine ?: $this->currentLine = $this->input->getCurrentLine();
     }
 
     /**

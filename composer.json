@@ -1,5 +1,15 @@
 {
   "autoload": {
-    "psr-4": {"Acme\\": "app/"}
+    "psr-4": {
+      "Acme\\": "app/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Tests\\": "tests/"
+    }
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^6.2"
   }
 }
